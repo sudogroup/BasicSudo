@@ -1,0 +1,13 @@
+config.json
+node_modules
+.vscode
+.env
+ca-certificate.crt
+*.jit
+*.pt
+*.zip
+package-lock.json
+*.pth
+__pycache__
+glide_model_cache
+*onnx
