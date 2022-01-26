@@ -54,10 +54,12 @@ class DiscordBot {
             }
         }
     }
+
     start() {
         this.client.login(process.env.DISCORD_TOKEN)
         .catch(console.error);
     }
+
     restart() {
         console.log('restarting...')
         this.client.destroy()
@@ -65,15 +67,18 @@ class DiscordBot {
             this.start();
         });
     }
+
     sendMessage(channelId, message) {
         const channel = this.guild.channels.cache.get(channelId);
         channel.send(message);
 
     }
+
     sendDM(discordId, message) {
         const user = this.client.users.cache.get(discordId);
         user.send(message);
     }
+    
     log(message) {
         console.log(message);
         // this.logChannel.send(`<t:${getDate()}:f> ${message}`);
