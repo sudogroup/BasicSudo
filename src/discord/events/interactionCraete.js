@@ -31,6 +31,12 @@ module.exports = {
         if (!command) return;
 
         try {
+            if(command.mod && !interaction.member.roles.cache.has("762841244949807114")) {
+                return interaction.reply({
+                    content: 'You need the `Moderator` role to use this command.', 
+                    ephemeral: true
+                });
+            }
             await command.execute(client, interaction);
         } catch (error) {
             console.error(error);

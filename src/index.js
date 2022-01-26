@@ -3,8 +3,11 @@ require('dotenv').config({path:'../.env'});
 const express = require('express'),
     fs = require('fs'),
     http = require('http'),
+    cron = require('node-cron'),
     { EventEmitter } = require("events"),
     { Server } = require("socket.io");
+const { postRequest } = require('./api/server');
+const { getStreams } = require('./api/twitch');
 
 const {DiscordBot} = require('./DiscordBot'),
     {getServerHook} = require('./hooks/server'),
@@ -49,5 +52,58 @@ server.listen(port, async () => {
     // hooks
     getSocketHook(io, emitter, discordBot);
     getServerHook(emitter, discordBot);
-
+    // shout-outs: 767125564011053129
+    // twitch: 883588530436186112
+    const shoutOutsChannelId = '767125564011053129',
+        twitchChannelId = '883588530436186112';
+    cron.schedule('* */2 * * *', function() {
+        // game_id=509670 (Science and Technology)
+        // game_id=1469308723 (Software and Game Development)
+        // language=ar (Arabic)
+        const gameIdSAT = 509670,
+            gameIdSAGD = 1469308723,
+            language = 'ar';
+        getStreamersByGameAndLanguage(gameIdSAT, language, (streamersSAT) => {
+            getStreamersByGameAndLanguage(gameIdSAGD, language, (streamersSAGD) => {
+                const streamersLive = streamersSAT.concat(streamersSAGD);
+                getStreamers((streamers) => {
+                    // remove streamersLive from streamers
+                    const newStreamers = streamers.filter(streamer => !streamersLive.include({user_id: streamer.twitchId}));
+                    // add new users to shout-outs
+                    if (newStreamers.length > 0) {
+                        for(newStreamer in newStreamers){
+                            discordBot.sendMessage(shoutOutsChannelId,
+                                `https://twitch.tv/${newStreamer.twitchName} is now live!`
+                            );
+                            postRequest('/streamers', {
+                                twitchId: newStreamertwitchId,
+                                twitchName: newStreamer.twitchName,
+                                streams: 1,
+                                isLive: true,
+                                lastLive: Date.now()
+                            })
+                        }
+                    }
+                    const streamersInDB = streamers.filter(streamer => streamersLive.include({user_id: streamer.twitchId}));
+                    if (streamersInDB.length > 0) {
+                        for(streamer in streamersInDB){
+                            const streamerInDB = streamersInDB[streamer];
+                            if (streamerInDB.isLive) {
+                                discordBot.sendMessage(shoutOutsChannelId,
+                                    `https://twitch.tv/${streamerInDB.twitchName} is still live!`
+                                );
+                            }
+                            postRequest('/streamers', {
+                                twitchId: streamerInDB.twitchId,
+                                twitchName: streamerInDB.twitchName,
+                                streams: streamerInDB.streams + 1,
+                                isLive: true,
+                                lastLive: Date.now()
+                            })
+                        }
+                    }
+                })
+            })
+        })
+    });
 });
